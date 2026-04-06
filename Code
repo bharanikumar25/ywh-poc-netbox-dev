@@ -1,0 +1,121 @@
+Q1: Top 10 Source IP (max bytes → dstip 117.20.44.95)
+
+Get-Content firewall.log |
+Where-Object { $_ -match "dstip=117.20.44.95" } |
+ForEach-Object {
+    $ip = ($_ -split "srcip=")[1].Split(" ")[0]
+    $bytes = [int](($_ -split "sentbyte=")[1].Split(" ")[0])
+    "$ip,$bytes"
+} |
+ConvertFrom-Csv -Header IP,Bytes |
+Group-Object IP |
+ForEach-Object {
+    $_.Name + " : " + ($_.Group | Measure-Object Bytes -Sum).Sum
+} |
+Sort-Object { [int]($_.Split(":")[1]) } -Descending |
+Select-Object -First 10
+
+Q2: Top Country (max bytes)
+Get-Content firewall.log |
+Where-Object { $_ -match "dstip=117.20.44.95" } |
+ForEach-Object {
+    $country = ($_ -split "srccountry=")[1].Split(" ")[0]
+    $bytes = [int](($_ -split "sentbyte=")[1].Split(" ")[0])
+    "$country,$bytes"
+} |
+ConvertFrom-Csv -Header Country,Bytes |
+Group-Object Country |
+ForEach-Object {
+    $_.Name + " : " + ($_.Group | Measure-Object Bytes -Sum).Sum
+} |
+Sort-Object { [int]($_.Split(":")[1]) } -Descending |
+Select-Object -First 10
+
+🔹 Q3: Top Service (attack type idea)
+Get-Content firewall.log |
+Where-Object { $_ -match "dstip=117.20.44.95" } |
+ForEach-Object {
+    ($_ -split "service=")[1].Split(" ")[0]
+} |
+Group-Object |
+Sort-Object Count -Descending
+
+🔹 Q4: Find anomalies
+# high bytes (possible data exfiltration)
+Get-Content firewall.log |
+ForEach-Object {
+    [int](($_ -split "sentbyte=")[1].Split(" ")[0])
+} | Sort-Object -Descending | Select-Object -First 10
+
+
+🔹 Q5: Which IP sent maximum bytes (single top attacker)
+Get-Content firewall.log |
+Where-Object { $_ -match "dstip=117.20.44.95" } |
+ForEach-Object {
+    $ip = ($_ -split "srcip=")[1].Split(" ")[0]
+    $bytes = [int](($_ -split "sentbyte=")[1].Split(" ")[0])
+    "$ip,$bytes"
+} |
+ConvertFrom-Csv -Header IP,Bytes |
+Group-Object IP |
+ForEach-Object {
+    [PSCustomObject]@{
+        IP = $_.Name
+        TotalBytes = ($_.Group | Measure-Object Bytes -Sum).Sum
+    }
+} |
+Sort-Object TotalBytes -Descending |
+Select-Object -First 1
+
+Q6: Repeated connections (suspicious IP)
+Get-Content firewall.log |
+ForEach-Object {
+    ($_ -split "srcip=")[1].Split(" ")[0]
+} |
+Group-Object |
+Sort-Object Count -Descending |
+Select-Object -First 10
+
+🔹 Q7: Suspicious country (most traffic)
+Get-Content firewall.log |
+ForEach-Object {
+    ($_ -split "srccountry=")[1].Split(" ")[0]
+} |
+Group-Object |
+Sort-Object Count -Descending |
+Select-Object -First 10
+
+
+🔹 Q8: Time-based anomaly (peak activity)
+Get-Content firewall.log |
+ForEach-Object {
+    ($_ -split "time=")[1].Split(" ")[0]
+} |
+Group-Object |
+Sort-Object Count -Descending |
+Select-Object -First 10
+
+
+for ($i=0; $i -le 1000; $i++) {
+    $domain = "instance-$i.soc.zohosecurity.team"
+    $result = nslookup -type=TXT $domain 1.1.1.1 2>$null
+
+    if ($result -match "text") {
+        Write-Output "FOUND TXT: $domain"
+    }
+}
+
+Arecord
+
+$letters = "abcdefghijklmnopqrstuvwxyz"
+
+for ($i=0; $i -le 1000; $i++) {
+    foreach ($c in $letters.ToCharArray()) {
+        $domain = "instance-$i-$c.soc.zohosecurity.team"
+        $result = nslookup $domain 1.1.1.1 2>$null
+
+        if ($result -match "Name") {
+            Write-Output "FOUND A: $domain"
+        }
+    }
+}
