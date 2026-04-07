@@ -119,3 +119,45 @@ for ($i=0; $i -le 1000; $i++) {
         }
     }
 }
+
+Get-Content firewall.log |
+Where-Object { $_ -match "dstip=117.20.44.95" } |
+ForEach-Object {
+    [PSCustomObject]@{
+        ip = ($_ -split "srcip=")[1].Split(" ")[0]
+        Bytes = [int](($_ -split "sentbyte=")[1].Split(" ")[0])
+        country = ($_ -split "srccountry=")[1].Split(" ")[0]
+        service = ($_ -split "service=")[1].Split(" ")[0]
+        date = ($_ -split "date=")[1].Split(" ")[0]
+        time = ($_ -split "time=")[1].Split(" ")[0]
+    }
+} |
+Group-Object country |
+ForEach-Object {
+    [PSCustomObject]@{
+        sampleip = $_.Group[0].ip
+        Country = $_.Name
+        Service = $_.Group[0].service
+        Time = $_.Group[0].time
+        Date = $_.Group[0].date
+        TotalBytes = ($_.Group | Measure-Object Bytes -Sum).Sum
+    }
+} |
+Sort-Object TotalBytes -Descending |
+Select-Object -First 10
+
+
+$letters = "abcdefghijklmnopqrstuvwxyz"
+
+for ($i=0; $i -le 1000; $i++) {
+    foreach ($c in $letters.ToCharArray()) {
+        
+        $domain = "instance-$i-$c.soc.zohosecurity.team"
+        $result = nslookup $domain 1.1.1.1 2>$null
+
+        if ($result -match "Address:") {
+            $ip = ($result | Select-String "Address:" | Select-Object -Last 1).ToString().Split(" ")[-1]
+            Write-Output "FOUND A: $domain -> $ip"
+        }
+    }
+}
