@@ -1,0 +1,188 @@
+# ==========================================================
+# ABUSEIPDB - IP REPUTATION
+# ==========================================================
+
+import pandas as pd
+import requests
+
+API_KEY = "YOUR_ABUSEIPDB_API_KEY"
+
+df = pd.read_csv("ip_list.csv")
+
+result = []
+
+for ip in df["ip"]:
+
+    headers = {
+        "Key": API_KEY,
+        "Accept": "application/json"
+    }
+
+    params = {
+        "ipAddress": ip,
+        "maxAgeInDays": 90
+    }
+
+    response = requests.get(
+        "https://api.abuseipdb.com/api/v2/check",
+        headers=headers,
+        params=params
+    )
+
+    if response.status_code == 200:
+
+        data = response.json()
+
+        result.append(
+            data["data"]["abuseConfidenceScore"]
+        )
+
+    else:
+
+        result.append("NA")
+
+df["AbuseScore"] = result
+
+df.to_csv("abuse_output.csv", index=False)
+
+print("Done")
+
+
+# ==========================================================
+# VIRUSTOTAL - IP REPUTATION
+# ==========================================================
+
+import pandas as pd
+import requests
+
+API_KEY = "YOUR_VIRUSTOTAL_API_KEY"
+
+df = pd.read_csv("ip_list.csv")
+
+result = []
+
+for ip in df["ip"]:
+
+    headers = {
+        "x-apikey": API_KEY
+    }
+
+    response = requests.get(
+        f"https://www.virustotal.com/api/v3/ip_addresses/{ip}",
+        headers=headers
+    )
+
+    if response.status_code == 200:
+
+        data = response.json()
+
+        result.append(
+            data["data"]["attributes"]["last_analysis_stats"]["malicious"]
+        )
+
+    else:
+
+        result.append("NA")
+
+df["Malicious"] = result
+
+df.to_csv("vt_ip_output.csv", index=False)
+
+print("Done")
+
+
+# ==========================================================
+# VIRUSTOTAL - URL REPUTATION
+# ==========================================================
+
+import pandas as pd
+import requests
+
+API_KEY = "YOUR_VIRUSTOTAL_API_KEY"
+
+df = pd.read_csv("url_list.csv")
+
+result = []
+
+for url in df["url"]:
+
+    headers = {
+        "x-apikey": API_KEY
+    }
+
+    data = {
+        "url": url
+    }
+
+    response = requests.post(
+        "https://www.virustotal.com/api/v3/urls",
+        headers=headers,
+        data=data
+    )
+
+    if response.status_code == 200:
+
+        json_data = response.json()
+
+        result.append(
+            json_data["data"]["id"]
+        )
+
+    else:
+
+        result.append("NA")
+
+df["Analysis_ID"] = result
+
+df.to_csv("vt_url_output.csv", index=False)
+
+print("Done")
+
+
+# ==========================================================
+# VIRUSTOTAL - SHA256 HASH REPUTATION
+# ==========================================================
+
+import pandas as pd
+import requests
+
+API_KEY = "YOUR_VIRUSTOTAL_API_KEY"
+
+df = pd.read_csv("hash_list.csv")
+
+result = []
+
+for hash_value in df["hash"]:
+
+    if len(hash_value) == 64:
+
+        headers = {
+            "x-apikey": API_KEY
+        }
+
+        response = requests.get(
+            f"https://www.virustotal.com/api/v3/files/{hash_value}",
+            headers=headers
+        )
+
+        if response.status_code == 200:
+
+            data = response.json()
+
+            result.append(
+                data["data"]["attributes"]["last_analysis_stats"]["malicious"]
+            )
+
+        else:
+
+            result.append("NA")
+
+    else:
+
+        result.append("NOT_SHA256")
+
+df["Malicious"] = result
+
+df.to_csv("vt_hash_output.csv", index=False)
+
+print("Done")
